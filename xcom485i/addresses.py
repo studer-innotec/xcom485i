@@ -26,6 +26,8 @@ class Addresses:
         Xcom-485i Modbus system address for configuration and status
     xt_group_device_id
         Virtual address to access all XTH, XTM and XTS (Multicast)
+    xt_l1_group_device_id
+        Virtual address to access all XTH, XTM and XTS (Multicast) present on the same phase, in this case L1
     xt_1_device_id
         First Xtender device address, up to 9 XT allowed, ordered by the index displayed on the RCC (Unicast)
     vt_group_device_id
@@ -59,6 +61,9 @@ class Addresses:
         self.gateway_device_id = self.dip_switches_offset + 1
         self.system_device_id = self.dip_switches_offset + 2
 
+        self.xt_l1_group_device_id = self.dip_switches_offset + 7
+        self.xt_l2_group_device_id = self.dip_switches_offset + 8
+        self.xt_l3_group_device_id = self.dip_switches_offset + 9
         self.xt_group_device_id = self.dip_switches_offset + 10
         self.xt_1_device_id = self.xt_group_device_id + 1
         self.xt_2_device_id = self.xt_group_device_id + 2
