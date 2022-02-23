@@ -17,6 +17,7 @@ parameters in RAM only
 """
 
 from struct import pack, unpack
+from datetime import datetime
 from umodbus.client.serial import rtu
 from umodbus.exceptions import *
 from xcom485i.addresses import Addresses
@@ -153,6 +154,73 @@ class Xcom485i:
             logger.debug("<- Receive data : 0x%s", str(ba.hex()))
             return float_response
 
+    def read_time(self, slave_id):
+        """
+        Read the system time from a targeted installation.
+
+        Note
+        -----
+        The system time is available at the address 0 of the device system.\n
+        The time registers are accessible separetely if needed by using the correct address and length.\n
+        Here is the list of time registers:\n
+        - 0 -> Microsecond\n
+        - 1 -> Second\n
+        - 2 -> Minute\n
+        - 3 -> Hour\n
+        - 4 -> Weekday\n
+        - 5 -> Day\n
+        - 6 -> Month\n
+        - 7 -> Year (format 2022 = 22)\n
+
+        Parameters
+        ----------
+        slave_id: int
+            Slave identifier number (targeted device)
+
+        Returns
+        -------
+        datetime
+            actual system time
+
+        Example
+        --------
+        .. code-block:: python
+
+            # Read the system time
+            # Run this example within the 'examples/' folder using 'python ex_read_time.py' from a CLI after installing
+            #   xcom485i package with 'pip install xcom485i'
+
+            import serial
+            from xcom485i.client import Xcom485i
+
+            SERIAL_PORT_NAME = 'COM4'  # your serial port interface name
+            SERIAL_PORT_BAUDRATE = 9600  # baudrate used by your serial interface
+            DIP_SWITCHES_ADDRESS_OFFSET = 0  # your modbus address offset as set inside the Xcom485i device
+
+            if __name__ == "__main__":
+                try:
+                    serial_port = serial.Serial(SERIAL_PORT_NAME, SERIAL_PORT_BAUDRATE, parity=serial.PARITY_EVEN, timeout=1)
+                except serial.serialutil.SerialException as e:
+                    print("Check your serial configuration : ", e)
+                else:
+                    xcom485i = Xcom485i(serial_port, DIP_SWITCHES_ADDRESS_OFFSET, debug=True)
+
+                    # read actual value stored into flash memory
+                    read_value = xcom485i.read_time(xcom485i.addresses.system_device_id)
+                    print('Read time:', read_value)
+        """
+        message = rtu.read_holding_registers(slave_id=slave_id, starting_address=0, quantity=8)
+        logger.debug("-> Transmit ADU : 0x%s", str(bytes(message).hex()))
+        try:
+            response = rtu.send_message(message, self.serial_port)
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "--> Please match your configurations and the values set with the dip-switches on the device: ", e)
+        except ModbusError as e:
+            logger.error("--> Modbus error : ", e)
+        else:
+            return datetime(response[7], response[6], response[5], response[3], response[2], response[1], response[0]*1000)
+            
     def write_parameter(self, slave_id, address, value):
         """
          Write a parameter value into a targeted device.
@@ -216,6 +284,87 @@ class Xcom485i:
         ba = pack('>f', value)
         registers = unpack('>HH', ba)
         message = rtu.write_multiple_registers(slave_id=slave_id, starting_address=address, values=registers)
+        logger.debug("-> Transmit ADU : 0x%s", str(bytes(message).hex()))
+        try:
+            response = rtu.send_message(message, self.serial_port)
+        except (ValueError, KeyError) as e:
+            logger.error(
+                "--> Please match your configurations and the values set with the dip-switches on the device: ", e)
+        except ModbusError as e:
+            logger.error("--> Modbus error : ", e)
+        else:
+            logger.debug("<- Receive data : 0x%s", str(response))
+            return response
+
+    def write_time(self, slave_id, value):
+        """
+        Write the time of a targeted installation.
+
+        Note
+        -----
+        It is only possible to set the time and date by writting all registers at the same time.\n
+        Here is the list of time registers:\n
+        - 0 -> Microsecond\n
+        - 1 -> Second\n
+        - 2 -> Minute\n
+        - 3 -> Hour\n
+        - 4 -> Weekday\n
+        - 5 -> Day\n
+        - 6 -> Month\n
+        - 7 -> Year (format 2022 = 22)\n
+
+        Parameters
+        ----------
+        slave_id
+            Slave identifier number (targeted device)
+        value
+            The new datetime to write
+
+        Returns
+        -------
+        int
+            Quantity of written registers (must be 8)
+
+        Example
+        --------
+        .. code-block:: python
+
+            # Write the system time
+            # Run this example within the 'examples/' folder using 'python ex_write_time.py' from a CLI after installing
+            #   xcom485i package with 'pip install xcom485i'
+
+            import serial
+            from xcom485i.client import Xcom485i
+            from datetime import datetime
+
+            SERIAL_PORT_NAME = 'COM4'  # your serial port interface name
+            SERIAL_PORT_BAUDRATE = 9600  # baudrate used by your serial interface
+            DIP_SWITCHES_ADDRESS_OFFSET = 0  # your modbus address offset as set inside the Xcom485i device
+
+            if __name__ == "__main__":
+                try:
+                    serial_port = serial.Serial(SERIAL_PORT_NAME, SERIAL_PORT_BAUDRATE, parity=serial.PARITY_EVEN, timeout=1)
+                except serial.serialutil.SerialException as e:
+                    print("Check your serial configuration : ", e)
+                else:
+                    xcom485i = Xcom485i(serial_port, DIP_SWITCHES_ADDRESS_OFFSET, debug=True)
+
+                    # current date and time
+                    current_dt = datetime.now()
+                    print(current_dt)
+                    echo = xcom485i.write_time(xcom485i.addresses.system_device_id, current_dt)
+                    assert echo == 8  # a value of 2 is expected on write action, represent the number of registers written
+                    print('echo:', echo)
+        """
+        registers = [int(value.microsecond / 1000),
+                        value.second,
+                        value.minute,
+                        value.hour,
+                        value.weekday(),
+                        value.day,
+                        value.month,
+                        value.year]
+        message = rtu.write_multiple_registers(slave_id=slave_id, starting_address=0, values=registers)
         logger.debug("-> Transmit ADU : 0x%s", str(bytes(message).hex()))
         try:
             response = rtu.send_message(message, self.serial_port)
