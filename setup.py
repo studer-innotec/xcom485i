@@ -10,7 +10,7 @@ with open(os.path.join(current_directory, 'README.rst'), encoding='utf-8') as f:
 
 name = "xcom485i"
 version = "0.9"
-release = "0.9.2"
+release = "0.9.3"
 
 setuptools.setup(
     name=name,

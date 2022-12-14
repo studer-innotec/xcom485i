@@ -11,4 +11,8 @@ Changelog
 ++++++++++++++++++
 
 * Add Read/Write time.
+
+0.9.3 (14-12-2022)
+++++++++++++++++++
+
 * Add L1, L2 and L3 multicast addresses.
