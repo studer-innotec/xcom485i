@@ -5,3 +5,8 @@ Changelog
 ++++++++++++++++++
 
 * First release.
+
+0.9.2 (14-12-2022)
+++++++++++++++++++
+
+* Add Read/Write time.
