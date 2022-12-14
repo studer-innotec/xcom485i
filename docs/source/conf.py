@@ -23,7 +23,7 @@ copyright = '2020, Studer-Innotec SA'
 author = 'Studer-Innotec SA'
 
 # The full version, including alpha/beta/rc tags
-release = '0.9.1'
+release = '0.9.2'
 
 # -- General configuration ---------------------------------------------------
 
